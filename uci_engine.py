@@ -1,4 +1,4 @@
-
+import random
 import chess
 from chessllm import ChessLLM
 import json
