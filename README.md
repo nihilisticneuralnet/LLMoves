@@ -2,7 +2,7 @@
 
 This is a project (inspired by [chess-llm](https://nicholas.carlini.com/writing/2023/chess-llm.html) ) to play chess against Large Language Models (LLMs).
 
-This code is very bare-bones. It's just enough to make things run. still have to work on lichess-bot.
+This code is very bare-bones. It's just enough to make things run.
 Maybe in the future I'll extend it to make it better.
 
 
@@ -42,7 +42,9 @@ against the model you can pass `./uci_engine.py`.
 ## Next steps
 
 I highly doubt I'll do any of these things, but here are some things
-I may want to do. (Or you can do!)
+I may want to do.
+
+- Work on lichess-bot
 
 - Search: what happens if instead of predicting the top-1 move you predict
 different moves and take the "best"? How do you choose "best"?
