@@ -50,6 +50,5 @@ different moves and take the "best"? How do you choose "best"?
 - Resign if lost: how can you detect if the game is lost and then just
 resign if it's obviously over?
 
-- Other models: right now this works for just OpenAI's text completion models.
-It would be great to hook this up to other models if any of them
+- Other models: It would be great to hook this up to other models if any of them
 become reasonably good at chess.
