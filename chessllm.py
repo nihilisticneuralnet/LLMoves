@@ -1,23 +1,5 @@
-#!/usr/bin/env python3
-
-## Copyright (C) 2023, Nicholas Carlini <nicholas@carlini.com>.
-##
-## This program is free software: you can redistribute it and/or modify
-## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 3 of the License, or
-## (at your option) any later version.
-##
-## This program is distributed in the hope that it will be useful,
-## but WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import requests
 import json
-
 import os
 import chess
 import chess.engine
@@ -25,19 +7,25 @@ import chess.pgn
 import random
 import pickle
 import sys
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
 
 class ChessLLM:
-    def __init__(self, api_key, config, **override):
+    def __init__(self, model_name, config, **override):
         self.config = config
-        for k,v in override.items():
-            config[k] = v
+        for k, v in override.items():
+            self.config[k] = v
+        
         if os.path.exists("cache.p"):
             with open("cache.p", "rb") as f:
                 self.cache = pickle.load(f)
         else:
             self.cache = {}
+        
         print("Loading cache with", len(self.cache), "entries")
-        self.api_key = api_key
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name)
 
     def get_query_pgn(self, board):
         pgn = str(chess.pgn.Game().from_board(board))
@@ -52,9 +40,9 @@ class ChessLLM:
             if board.fullmove_number == 1:
                 pgn = pgn + "\n\n1."
             else:
-                pgn += ' '+str(board.fullmove_number)+"."
+                pgn += ' ' + str(board.fullmove_number) + "."
 
-        with_header = f"""[White "Magnus Carlsen"]\n[Black "Garry Kasparov"]\n[WhiteElo "2900"]\n[BlackElo "2800"]\n\n"""+pgn.split("\n\n")[1]
+        with_header = f"""[White "Magnus Carlsen"]\n[Black "Garry Kasparov"]\n[WhiteElo "2900"]\n[BlackElo "2800"]\n\n""" + pgn.split("\n\n")[1]
 
         return with_header
 
@@ -73,6 +61,7 @@ class ChessLLM:
 
         return ok_moves
     
+
     def get_best_move(self, board, num_tokens=None, conversation=None):
         if num_tokens is None:
             num_tokens = self.config['num_lookahead_tokens']
@@ -91,10 +80,10 @@ class ChessLLM:
         if conversation:
             conversation.send_message("player", f"Querying {self.config['model']} with ... {pgn_to_query.split(']')[-1][-90:]}")
             conversation.send_message("spectator", f"Querying {self.config['model']} with ... {pgn_to_query.split(']')[-1][-90:]}")
-        
+
         next_text = self.make_request(pgn_to_query, num_tokens)
         if next_text[:2] == "-O":
-            next_text = self.make_request(pgn_to_query+" ", num_tokens)
+            next_text = self.make_request(pgn_to_query + " ", num_tokens)
 
         if conversation:
             conversation.send_message("spectator", f"Received reply of '{next_text}'")
@@ -102,13 +91,14 @@ class ChessLLM:
         next_moves = self.try_moves(board, next_text)
 
         if len(next_moves) == 0:
-            conversation.send_message("player", f"Tried to make an invalid move.")
-            conversation.send_message("spectator", f"Tried to make an invalid move.")
+            if conversation:
+                conversation.send_message("player", f"Tried to make an invalid move.")
+                conversation.send_message("spectator", f"Tried to make an invalid move.")
             return None
 
         if conversation:
             conversation.send_message("player", f"Received reply and making move {next_moves[0]}.")
-        
+
         new_board = board.copy()
         for move in next_moves:
             self.cache[new_board.fen()] = move
@@ -119,24 +109,7 @@ class ChessLLM:
         return next_moves[0]
 
     def make_request(self, content, num_tokens):
-        url = "https://api.openai.com/v1/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-        data = {
-            "model": self.config['model'],
-            "prompt": content,
-            "temperature": self.config['temperature'],
-            "max_tokens": num_tokens,
-        }
-    
-
-        #sys.stderr.write(repr(data)+"\n")
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        response = response.json()['choices'][0]['text']
-        #sys.stderr.write(response+"\n")
-
+        inputs = self.tokenizer(content, return_tensors='pt')
+        outputs = self.model.generate(inputs.input_ids, max_length=num_tokens, do_sample=True, temperature=self.config['temperature'])
+        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         return response
-    
-
