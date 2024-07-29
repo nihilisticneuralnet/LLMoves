@@ -2,7 +2,7 @@
 
 This is a project (inspired by [chess-llm](https://nicholas.carlini.com/writing/2023/chess-llm.html) ) to play chess against Large Language Models (LLMs).
 
-This code is very bare-bones. It's just enough to make things run.
+This code is very bare-bones. It's just enough to make things run. still have to work on lichess-bot.
 Maybe in the future I'll extend it to make it better.
 
 
