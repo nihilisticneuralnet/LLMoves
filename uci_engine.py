@@ -18,6 +18,7 @@
 import chess
 from chessllm import ChessLLM
 import json
+import chess
 
 def main():
 
@@ -29,8 +30,8 @@ def main():
         log.write(f"Got line: {repr(line)}\n")
         log.flush()
         if line == "uci":
-            print(f"id name chess-llm-with-{config['model']}")
-            print("id author Nicholas Carlini")
+            # print("id name")
+            print("id author")
             print("uciok")
         elif line == "isready":
             print("readyok")
@@ -74,12 +75,9 @@ def main():
             print(f"bestmove {uci_move}")
         elif line == "quit":
             break
-
-        
+            
 if __name__ == "__main__":
-    log = open("/tmp/log.txt", "a")
-    api_key = open("OPENAI_API_KEY").read().strip()
+    log = open("log.txt", "a")
     config = json.loads(open("config.json").read())
-    engine = ChessLLM(api_key, config)
+    engine = ChessLLM("facebook/opt-1.3b", config, num_lookahead_tokens=50)
     main()
-
